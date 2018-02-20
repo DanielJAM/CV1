@@ -11,7 +11,7 @@ function [ albedo, normal ] = estimate_alb_nrm( image_stack, scriptV, shadow_tri
 
 [h, w, ~] = size(image_stack);
 if nargin == 2
-    shadow_trick = true;
+    shadow_trick = false;
 end
 
 % create arrays for 
@@ -28,10 +28,13 @@ normal = zeros(h, w, 3);
 %   solve scriptI * scriptV * g = scriptI * i to obtain g for this point
 %   albedo at this point is |g|
 %   normal at this point is g / |g|
-    function [pointwise_albedo, pointwise_normal]= pointwise(height,width)
-        size_stack = size(image_stack);
+size_stack = size(image_stack);
+g = zeros(h,w,3);
+
+for height = 1:h
+    for width = 1:w
         i = image_stack(height, width, 1:size_stack(3));
-        i=reshape(i, [1,size_stack(3)]);
+        i = reshape(i, [1,size_stack(3)]);
         scriptI = eye(size_stack(3)).*i;
         if shadow_trick == true
             rhs = scriptI*i';
@@ -40,18 +43,14 @@ normal = zeros(h, w, 3);
             rhs = i';
             lhs = scriptV;
         end
-        g=linsolve(lhs,rhs);
-        pointwise_albedo = norm(g);
-        pointwise_normal = g'./norm(g);
-    end
-
-for ht = 1:h
-    for wd = 1:w
-        albedo(ht,wd,1) = pointwise(ht,wd);
-        normal(ht,wd,1:3) = pointwise(ht,wd);
+        pointwise_g = linsolve(lhs,rhs);
+        %for i = 1:3
+        %    g(height, width, i) = tmp(i);
+        %end
+        albedo(height,width,1) = norm(pointwise_g);
+        normal(height,width,:) = pointwise_g./norm(pointwise_g);
     end
 end
-
 
 % =========================================================================
 
